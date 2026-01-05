@@ -205,7 +205,7 @@ if __name__ == "__main__":
     os.makedirs(f"sim_{method}/{noise}/{dataset}", exist_ok=True)
     res_path = f"res_{method}/{noise}/{dataset}/{snr}_{noise.replace('/','_')}.csv"
     sim_path = f"sim_{method}/{noise}/{dataset}/{snr}_{noise.replace('/','_')}.csv"
-    model_path = 'model/Qwen/Qwen2___5-Omni-7B'
+    model_path = './model'
     model = Qwen2_5OmniForConditionalGeneration.from_pretrained(model_path, torch_dtype="auto", device_map=None,
                                                                 trust_remote_code=True)
     processor = Qwen2_5OmniProcessor.from_pretrained(model_path, trust_remote_code=True)
