@@ -6,17 +6,17 @@ DATASETS=(speech sound music librispeech)
 METHODS=(SEES)
 SNRS=(-10 -5 0 5 10 20 30)
 
-# ⭐ 支持多种噪声
-NOISES=(crowd machine traffic wind)   # 按需增减
+# ⭐ Support multiple noise types
+NOISES=(crowd machine traffic)   # Add or remove as needed
 
 GPU=0
 
-# ===== 特殊数据集配置 =====
+# ===== Special dataset configuration =====
 SPECIAL_DATASET="librispeech"
 SPECIAL_SCRIPT="get_wer.py"
 DEFAULT_SCRIPT="get_acc.py"
 
-# ===== 记录成功运行的命令 =====
+# ===== Record successfully executed commands =====
 DONE_LOG="run_done.log"
 touch "$DONE_LOG"
 
@@ -38,11 +38,11 @@ for method in "${METHODS[@]}"; do
         key="method=${method},dataset=${dataset},noise=${noise},snr=${snr}"
 
         if is_done "$key"; then
-          echo "[SKIP] $key already done"
+          echo "[SKIP] $key already completed"
           continue
         fi
 
-        # ===== 选择脚本 =====
+        # ===== Select script =====
         if [[ "$dataset" == "$SPECIAL_DATASET" ]]; then
           SCRIPT="$SPECIAL_SCRIPT"
         else
