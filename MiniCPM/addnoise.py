@@ -86,11 +86,11 @@ if __name__ == "__main__":
     noise_files = [f for f in os.listdir(args.noise_root) if f.endswith(".wav")]
 
     if not clean_files:
-        print("[Error] clean_dir doesn't have wav 文件")
+        print("[Error] clean_dir doesn't have wav ")
         sys.exit(1)
 
     if not noise_files:
-        print("[Error] noise_root doesn't have wav 文件")
+        print("[Error] noise_root doesn't have wav ")
         sys.exit(1)
 
     os.makedirs(args.output_dir, exist_ok=True)
