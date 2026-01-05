@@ -129,7 +129,7 @@ class Deactivate:
         self.denoised_hidden = x.detach().cpu()
         hidden[0,:,:] = x.to(orig_dtype)
         
-        # 恢复 tuple 输出结构
+      
         if isinstance(output, tuple):
             return (hidden,) + output[1:]
         else:
@@ -140,9 +140,7 @@ class Deactivate:
 
 
 def read_csv(csv_path,test_samples=100):
-    """
-    从metadata.csv中读取音频路径,提取前num_samples条音频的中间层激活。
-    """
+   
     df = pd.read_csv(csv_path)
     
     audio_test_path = []
@@ -175,14 +173,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Example for dataset, noise, method, test_len")
 
-    # 添加命令行参数
+  
     parser.add_argument('--datasets', type=str, default='librispeech',choices=['librispeech'], help='Dataset name')
     parser.add_argument('--noise', type=str, default='gauss', help='Noise type')
    
     parser.add_argument('--gpu', type=int, default=0, help='GPU id')
     parser.add_argument('--test_len', type=int, default=100, help='test-len')
     parser.add_argument('--SNR', type=int, default=0, choices=[-10,-5,0,5,10,20,30],help='SNR')
-    # 解析命令行参数
+  
     
     args = parser.parse_args()
     dataset = args.datasets
@@ -190,7 +188,7 @@ if __name__ == "__main__":
     gpu_id = args.gpu
     test_len = args.test_len
     snr = args.SNR
-    # 使用 args 参数
+  
     print("datasets:",args.datasets)
     print("Noise:", args.noise)
    
@@ -219,7 +217,7 @@ if __name__ == "__main__":
         )
     tokenizer = AutoTokenizer.from_pretrained(local_model, trust_remote_code=True, local_files_only=True)
     model.init_tts()
-    device = torch.device(f"cuda:{gpu_id}")  # 你想用的 GPU
+    device = torch.device(f"cuda:{gpu_id}")  
     model.to(device)
     model.eval()
 
@@ -234,11 +232,11 @@ if __name__ == "__main__":
 
     V_list = torch.load(f'v_list_{noise}_0.1_0.pt')
     # E,F = pipeline.getef(audio_test_paths,test_texts,v_list)
-    # 在测试集上评估
+   
     sim1_list, sim2_list, sim3_list, sim4_list, sim5_list, sim6_list = [], [], [], [], [], []
     E,F,E_noise,F_noise,E_new ,F_new,E_old,F_old = [],[],[],[],[],[],[],[]
     for i in range(test_len):
-        print(f"-----------Process On:{i + 1}/{test_len}条音频-----------")
+        print(f"-----------Process On:{i + 1}/{test_len}audio-----------")
         print(f"{audio_paths[i]}")
         print(f"{audio_noise_paths[i]}")
         result,result_old,act,deact,e,e_old,f,f_old = pipeline.generate_with_denoise(audio_paths[i],V_list)
@@ -271,7 +269,7 @@ if __name__ == "__main__":
     columns = ["act-act_noise", "act-deact_noise", "deact-act_noise", 
            "act-deact", "deact-deact_noise", "act_noise-deact_noise"]
 
-    # 创建 DataFrame
+    
     df = pd.DataFrame({
         columns[0]: sim1_list,
         columns[1]: sim2_list,
@@ -281,7 +279,7 @@ if __name__ == "__main__":
         columns[5]: sim6_list,
     })
 
-    # 写入 CSV 文件
+   
     df.to_csv(sim_path, index=False, encoding='utf-8')
 
     os.makedirs(f'{method}_{dataset}/{noise}/yuan', exist_ok=True)
@@ -322,31 +320,26 @@ if __name__ == "__main__":
     r_3_vs_2 = ASR(res, res_old)
     r_4_vs_2 = ASR(res, res_noise)
     r_5_vs_2 = ASR(res, res_new)
-    print("===== ASR结果汇总 =====")
-    print(f"正常 vs 正确答案 WER: {r_2_vs_1:.2%}")
-    print(f"正常抑制后 vs 正确答案 WER: {r_3_vs_1:.2%}")
-    print(f"加噪 vs 正确答案 WER: {r_4_vs_1:.2%}")
-    print(f"加噪抑制后 vs 正确答案 WER: {r_5_vs_1:.2%}")
-    print(f"正常抑制后 vs 正常 WER: {r_3_vs_2:.2%}")
-    print(f"加噪 vs 正常 WER: {r_4_vs_2:.2%}")
-    print(f"加噪抑制后 vs 正常 WER: {r_5_vs_2:.2%}")
+
 
     row = {
     "dataset": dataset,
     "noise": noise,
     "time": datetime.now().isoformat(timespec="seconds"),
-    "正常 vs 正确答案 WER": f"{r_2_vs_1:.2%}",
-    "正常抑制后 vs 正确答案 WER": f"{r_3_vs_1:.2%}",
-    "加噪 vs 正确答案 WER": f"{r_4_vs_1:.2%}",
-    "加噪抑制后 vs 正确答案 WER": f"{r_5_vs_1:.2%}",
-    "正常抑制后 vs 正常 WER": f"{r_3_vs_2:.2%}",
-    "加噪 vs 正常 WER": f"{r_4_vs_2:.2%}",
-    "加噪抑制后 vs 正常 WER": f"{r_5_vs_2:.2%}",
-    }
+
+    "Clean vs Ground Truth WER": f"{r_2_vs_1:.2%}",
+    "Denoised (Clean) vs Ground Truth WER": f"{r_3_vs_1:.2%}",
+    "Noisy vs Ground Truth WER": f"{r_4_vs_1:.2%}",
+    "Noisy + Denoised vs Ground Truth WER": f"{r_5_vs_1:.2%}",
+
+    "Denoised (Clean) vs Clean WER": f"{r_3_vs_2:.2%}",
+    "Noisy vs Clean WER": f"{r_4_vs_2:.2%}",
+    "Noisy + Denoised vs Clean WER": f"{r_5_vs_2:.2%}",
+}
+
 
     df = pd.DataFrame([row])
 
-    # 判断是否首次写入
     write_header = not os.path.exists(res_path)
 
     df.to_csv(

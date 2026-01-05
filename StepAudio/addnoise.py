@@ -5,18 +5,11 @@ import soundfile as sf
 import os
 from scipy.signal import resample_poly
 
-# =====================================================
-# 全局随机种子（保证可复现）
-# =====================================================
 SEED = 42
 np.random.seed(SEED)
 
 TARGET_SR = 16000
 
-
-# =====================================================
-# 工具函数
-# =====================================================
 def resample_to_16k(audio, orig_sr):
     if orig_sr == TARGET_SR:
         return audio
@@ -38,13 +31,12 @@ def loop_or_cut_noise(noise, target_length):
     return np.tile(noise, repeat)[:target_length]
 
 
-# 生成高斯噪声并根据目标SNR调整
 def generate_gaussian_noise(length, snr_db, clean):
-    # 计算目标音频的功率
+ 
     clean_power = np.mean(clean ** 2)
-    # 根据SNR计算噪声功率
+    
     target_noise_power = clean_power / (10 ** (snr_db / 10))
-    # 生成标准差为sqrt(噪声功率)的高斯噪声
+   
     std = np.sqrt(target_noise_power)
     noise = np.random.normal(0, std, length)
     return noise
@@ -68,55 +60,46 @@ def add_noise_with_snr(clean_path, noise_array, noisy_output_path, raw_output_pa
     sf.write(raw_output_path, noise_scaled, TARGET_SR)
     sf.write(noisy_output_path, noisy, TARGET_SR)
 
-
-# =====================================================
-# 主程序
-# =====================================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--clean_dir", type=str, required=True)
     parser.add_argument("--noise_root", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
-    parser.add_argument("--snrs", type=str, default="10",
-                        help="例如: 0,10,20,30")
-    parser.add_argument("--include_gaussian", action='store_true', 
-                        help="是否包括高斯噪声")
-    parser.add_argument("--skip_existing", action='store_true', 
-                        help="如果目标文件已存在，则跳过生成")
+    parser.add_argument("--snrs", type=str, default="10"
+                       )
+    parser.add_argument("--include_gaussian", action='store_true')
+    parser.add_argument("--skip_existing", action='store_true')
 
     args = parser.parse_args()
 
     snr_values = [int(s.strip()) for s in args.snrs.split(",")]
 
     if not os.path.isdir(args.clean_dir):
-        print(f"[错误] clean_dir 不存在: {args.clean_dir}")
+        print(f"[Error] clean_dir not exist: {args.clean_dir}")
         sys.exit(1)
 
     if not os.path.isdir(args.noise_root):
-        print(f"[错误] noise_root 不存在: {args.noise_root}")
+        print(f"[Error] noise_root not exist: {args.noise_root}")
         sys.exit(1)
 
     clean_files = [f for f in os.listdir(args.clean_dir) if f.endswith(".wav")]
     noise_files = [f for f in os.listdir(args.noise_root) if f.endswith(".wav")]
 
     if not clean_files:
-        print("[错误] clean_dir 中没有 wav 文件")
+        print("[Error] clean_dir doesn't have wav")
         sys.exit(1)
 
     if not noise_files:
-        print("[错误] noise_root 中没有 wav 文件")
+        print("[Error] noise_root doesn't have wav")
         sys.exit(1)
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # =================================================
-    # 处理真实噪声 wav 和高斯噪声
-    # =================================================
     for noise_file in noise_files:
         noise_path = os.path.join(args.noise_root, noise_file)
         noise_name = os.path.splitext(noise_file)[0]
 
-        print(f"\n=== 噪声类型: {noise_name} ===")
+        print(f"\n=== noise type: {noise_name} ===")
 
         noise_audio, noise_sr = sf.read(noise_path)
         if noise_audio.ndim > 1:
@@ -142,9 +125,9 @@ if __name__ == "__main__":
                 raw_output_path = os.path.join(raw_dir, clean_file)
                 noisy_output_path = os.path.join(noisy_dir, clean_file)
 
-                # 如果文件已存在，跳过处理
+               
                 if args.skip_existing and os.path.exists(noisy_output_path) and os.path.exists(raw_output_path):
-                    print(f"跳过 {clean_file}，文件已存在")
+                    print(f"Skip {clean_file}, file already exists")
                     continue
 
                 add_noise_with_snr(
@@ -153,12 +136,12 @@ if __name__ == "__main__":
                     noisy_output_path,
                     raw_output_path,
                     snr=snr_v,
-                    is_gaussian=False  # 这里仍然使用现有噪声文件
+                    is_gaussian=False 
                 )
 
-    # 处理高斯噪声
+
     
-    print("\n=== 处理高斯噪声 ===")
+    print("\n=== Process Gauss ===")
     for snr_v in snr_values:
         snr_dir = os.path.join(
             args.output_dir,
@@ -177,18 +160,18 @@ if __name__ == "__main__":
             raw_output_path = os.path.join(raw_dir, clean_file)
             noisy_output_path = os.path.join(noisy_dir, clean_file)
 
-            # 如果文件已存在，跳过处理
+           
             if args.skip_existing and os.path.exists(noisy_output_path) and os.path.exists(raw_output_path):
-                print(f"跳过 {clean_file}，文件已存在")
+                print(f"Skip {clean_file}, file already exists")
                 continue
 
             add_noise_with_snr(
                 clean_path,
-                None,  # 高斯噪声不需要噪声文件
+                None, 
                 noisy_output_path,
                 raw_output_path,
                 snr=snr_v,
-                is_gaussian=True  # 指定使用高斯噪声
+                is_gaussian=True
                 )
 
-    print("\n✅ 所有噪声添加完成（随机种子已固定，采样率 16kHz）")
+    print("\n All noise types have been done")
