@@ -141,8 +141,7 @@ class Deactivate:
         self.F_de = f
         self.denoised_hidden = x.detach().cpu()
         hidden = x.to(orig_dtype)
-        
-        # 恢复 tuple 输出结构
+       
         if isinstance(output, tuple):
             return (hidden,) + output[1:]
         else:
@@ -153,9 +152,7 @@ class Deactivate:
 
 
 def read_csv(csv_path,test_samples=100):
-    """
-    从metadata.csv中读取音频路径,提取前num_samples条音频的中间层激活。
-    """
+    
     df = pd.read_csv(csv_path)
     
     audio_test_path = []
@@ -179,14 +176,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Example for dataset, noise, method, test_len")
 
-    # 添加命令行参数
+   
     parser.add_argument('--datasets', type=str, choices=['music','sound','speech'], help='Dataset name')
     parser.add_argument('--noise', type=str, default='gauss', help='Noise type')
    
     parser.add_argument('--gpu', type=int, default=0, help='GPU id')
     parser.add_argument('--test_len', type=int, default=300, help='test-len')
     parser.add_argument('--SNR', type=int, default=0, choices=[-10,-5,0,5,10,20,30],help='SNR')
-    # 解析命令行参数
     
     args = parser.parse_args()
     dataset = args.datasets
@@ -194,7 +190,7 @@ if __name__ == "__main__":
     gpu_id = args.gpu
     test_len = args.test_len
     snr = args.SNR
-    # 使用 args 参数
+    
     print("datasets:",args.datasets)
     print("Noise:", args.noise)
    
@@ -210,8 +206,8 @@ if __name__ == "__main__":
     os.makedirs(f"sim_{method}/{noise}/{dataset}", exist_ok=True)
     res_path = f"res_{method}/{noise}/{dataset}/{snr}_{noise.replace('/','_')}.csv"
     sim_path = f"sim_{method}/{noise}/{dataset}/{snr}_{noise.replace('/','_')}.csv"
-    model = StepAudio2('/home/tjy/audio_denoise/model/stepaudio')
-    token2wav = Token2wav('/home/tjy/audio_denoise/model/stepaudio/token2wav')
+    model = StepAudio2('model')
+    token2wav = Token2wav('model/token2wav')
     target_layer = model.llm.encoder.blocks[27:]
     res_new = []
     res_old = []
@@ -225,11 +221,11 @@ if __name__ == "__main__":
 
     V_list = torch.load(f'v_list_{noise}_0.1_0.pt')
     # E,F = pipeline.getef(audio_test_paths,test_texts,v_list)
-    # 在测试集上评估
+    
     sim1_list, sim2_list, sim3_list, sim4_list, sim5_list, sim6_list = [], [], [], [], [], []
     E,F,E_noise,F_noise,E_new ,F_new,E_old,F_old = [],[],[],[],[],[],[],[]
     for i in range(test_len):
-        print(f"-----------Process On:{i + 1}/{test_len}条音频-----------")
+        print(f"-----------Process On:{i + 1}/{test_len}audio-----------")
         print(f"{audio_paths[i]}")
         print(f"{audio_noise_paths[i]}")
         result,result_old,act,deact,e,e_old,f,f_old = pipeline.generate_with_denoise(audio_paths[i], texts[i],V_list)
@@ -262,7 +258,7 @@ if __name__ == "__main__":
     columns = ["act-act_noise", "act-deact_noise", "deact-act_noise", 
            "act-deact", "deact-deact_noise", "act_noise-deact_noise"]
 
-    # 创建 DataFrame
+   
     df = pd.DataFrame({
         columns[0]: sim1_list,
         columns[1]: sim2_list,
@@ -272,10 +268,10 @@ if __name__ == "__main__":
         columns[5]: sim6_list,
     })
 
-    # 写入 CSV 文件
+    
     df.to_csv(sim_path, index=False, encoding='utf-8')
 
-    Path(res_path).parent.mkdir(parents=True, exist_ok=True)  # 创建父目录
+    Path(res_path).parent.mkdir(parents=True, exist_ok=True)
     with open(res_path, "w", encoding="utf-8") as f:
         f.write(f"--------{datetime.now()}--------\n")
 
@@ -319,33 +315,27 @@ if __name__ == "__main__":
 
     df = pd.read_csv(res_path)
 
-   # 1) 加噪错，但抑制后改对
+  
     fixed = df[(df["res_noise"] != df["answer"]) & (df["res_new"] == df["answer"])]
     fixed_len = len(df[(df["res_noise"] != df["answer"])])
-    # 2) 加噪对，但抑制后改错
+    
     broken = df[(df["res_noise"] == df["answer"]) & (df["res_new"] != df["answer"])]
     broken_len = len(df[(df["res_noise"] == df["answer"])])
-    # 3) 加噪不正常，但抑制后正常
+    
     chang = df[(df["res_noise"] != df["res"]) & (df["res_new"] == df["res"])]
     chang_len = len(df[(df["res_noise"] != df["res"])])
-    # 4) 加噪正常，但抑制后不正常
+    
     yi = df[(df["res_noise"] == df["res"]) & (df["res_new"] != df["res"])]
     yi_len = len(df[(df["res_noise"] == df["res"])])
     
     print(fixed_len, broken_len)
 
-    print("加噪错误但抑制后改对:", len(fixed), f"({len(fixed)/fixed_len:.2%})")
-    print("加噪正确但抑制后改错:", len(broken), f"({len(broken)/broken_len:.2%})")
-    print(chang_len, yi_len)
-
-    print("加噪不正常但抑制后正常:", len(chang), f"({len(chang)/chang_len:.2%})")
-    print("加噪正常但抑制后不正常:", len(yi), f"({len(yi)/yi_len:.2%})")
+  
     y_true =(df["answer"] == df["res"]).astype(int).values
 
-    # y_pred_noise：噪声输出是否与正常输出一致？
+   
     y_pred_noise = (df["res_noise"] == df["res"]).astype(int).values
 
-    # y_pred_new：抑制后输出是否与正常输出一致？
     y_pred_new = (df["res_new"] == df["res"]).astype(int).values
 
     def report_preds(y_true, y_pred, name):
@@ -360,7 +350,7 @@ if __name__ == "__main__":
         print(classification_report(y_true, y_pred, digits=4))
         return F1_micro,F1_macro
 
-    # 计算并打印
+   
     F1_micro_noise,F1_macro_noise = report_preds(y_true, y_pred_noise, "res_noise vs res (noisy prediction)")
     F1_micro_new,F1_macro_new = report_preds(y_true, y_pred_new,   "res_new   vs res (suppressed prediction)")
     def radio(correct, pred):
@@ -378,31 +368,39 @@ if __name__ == "__main__":
     r_3_vs_2 = radio(res, res_old)
     r_4_vs_2 = radio(res, res_noise)
     r_5_vs_2 = radio(res, res_new)
-    print(f"第二行 vs 第一行 相同率: {r_2_vs_1:.2%}")
-    print(f"第三行 vs 第一行 相同率: {r_3_vs_1:.2%}")
-    print(f"第四行 vs 第一行 相同率: {r_4_vs_1:.2%}")
-    print(f"第五行 vs 第一行 相同率: {r_5_vs_1:.2%}")
-    print(f"第三行 vs 第二行 相同率: {r_3_vs_2:.2%}")
-    print(f"第四行 vs 第二行 相同率: {r_4_vs_2:.2%}")
-    print(f"第五行 vs 第二行 相同率: {r_5_vs_2:.2%}")
+   
     args_dict = vars(args)
     with open(log_path, "a", encoding="utf-8") as f:
-        f.write(f"--------{dataset}:运行结果{datetime.now()}--------\n")
+        f.write(f"--------{dataset}:result{datetime.now()}--------\n")
         for k, v in args_dict.items():
             f.write(f"{k} = {v}\n")
           
-        f.write(f"正常 vs 正确答案 相同率: {r_2_vs_1:.2%}\n")
-        f.write(f"正常抑制后 vs 正确答案： {r_3_vs_1:.2%}\n")
-        f.write(f"加噪 vs 正确答案 相同率: {r_4_vs_1:.2%}\n")
-        f.write(f"加噪抑制后 vs 正确答案 相同率: {r_5_vs_1:.2%}\n")
-        f.write(f"正常抑制后 vs 正常 相同率: {r_3_vs_2:.2%}\n")
-        f.write(f"加噪 vs 正常 相同率: {r_4_vs_2:.2%}\n")
-        f.write(f"加噪抑制后 vs 正常 相同率: {r_5_vs_2:.2%}\n")
+        f.write(f"Clean vs Ground Truth agreement rate: {r_2_vs_1:.2%}\n")
+        f.write(f"Denoised (clean) vs Ground Truth agreement rate: {r_3_vs_1:.2%}\n")
+        f.write(f"Noisy vs Ground Truth agreement rate: {r_4_vs_1:.2%}\n")
+        f.write(f"Noisy + Denoised vs Ground Truth agreement rate: {r_5_vs_1:.2%}\n")
+        
+        f.write(f"Denoised (clean) vs Clean agreement rate: {r_3_vs_2:.2%}\n")
+        f.write(f"Noisy vs Clean agreement rate: {r_4_vs_2:.2%}\n")
+        f.write(f"Noisy + Denoised vs Clean agreement rate: {r_5_vs_2:.2%}\n")
+        
+        f.write(
+            f"Incorrect under noise but corrected after denoising: "
+            f"{len(fixed)}/{fixed_len} = {len(fixed)/fixed_len:.2%}\n"
+        )
+        f.write(
+            f"Correct under noise but incorrect after denoising: "
+            f"{len(broken)}/{broken_len} = {len(broken)/broken_len:.2%}\n"
+        )
+        f.write(
+            f"Abnormal under noise but normalized after denoising: "
+            f"{len(chang)}/{chang_len} = {len(chang)/chang_len:.2%}\n"
+        )
+        f.write(
+            f"Normal under noise but abnormal after denoising: "
+            f"{len(yi)}/{yi_len} = {len(yi)/yi_len:.2%}\n"
+        )
 
-        f.write(f"加噪错误但抑制后改对:{len(fixed)}/{fixed_len} == {len(fixed)/fixed_len:.2%}\n")
-        f.write(f"加噪正确但抑制后改错:{len(broken)}/{broken_len} == {len(broken)/broken_len:.2%}\n")
-        f.write(f"加噪不正常但抑制后正常:{len(chang)}/{chang_len} == {len(chang)/chang_len:.2%}\n")
-        f.write(f"加噪正常但抑制后不正常:{len(yi)}/{yi_len} == {len(yi)/yi_len:.2%}\n")
         f.write(f"F1_micro_noise:{F1_micro_noise:.4%}\n")
         f.write(f"F1_macro_noise:{F1_macro_noise:.4%}\n")
         f.write(f"F1_micro_new:{F1_micro_new:.4%}\n")
