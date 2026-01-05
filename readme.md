@@ -27,7 +27,7 @@ bash create_data.sh
 Qwen,MiniCPM,Stepaudio models can be downloaded from huggingface and placed in the models in their directory.   
 - [Qwen2.5-Omni](https://huggingface.co/Qwen/Qwen2.5-Omni-7B)
 - [MiniCPM-o-2_6](https://huggingface.co/openbmb/MiniCPM-o-2_6)
-- [Stepaudio2-mini](https://huggingface.co/stepfun-ai/Step-Audio-2-mini)
+- [StepAudio2-mini](https://huggingface.co/stepfun-ai/Step-Audio-2-mini)
 
 ## Quick Start
 To quickly run the SEE evaluation and mitigation experiments, follow these steps:
